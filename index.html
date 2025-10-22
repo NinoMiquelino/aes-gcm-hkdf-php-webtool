@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crypto Tool AES-256-GCM</title>
+    <meta name="author" content="Onivaldo Miquelino">      
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Ajuste opcional para o body */
+        body {
+            font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
+
+    <div class="bg-white p-8 rounded-xl shadow-2xl w-full max-w-2xl">
+        <h1 class="text-3xl font-bold text-center text-indigo-700 mb-6">AES-256-GCM Crypto Tool</h1>
+        
+        <div class="space-y-4">
+            <div>
+                <label for="encryptionKey" class="block text-sm font-medium text-gray-700">
+                    Chave de Criptografia (64 caracteres hexadecimais)
+                </label>
+                <div class="mt-1 flex rounded-md shadow-sm">
+                    <input type="text" id="encryptionKey" maxlength="64" class="flex-1 block w-full rounded-l-md border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 p-2 border" placeholder="Ex: a1b2c3d4e5f67890..." required>
+                    <button id="generateKeyBtn" class="px-4 py-2 bg-indigo-500 text-white font-medium rounded-r-md hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition duration-150 ease-in-out">
+                        Gerar
+                    </button>
+                </div>
+            </div>
+
+            <div>
+                <label for="urlAad" class="block text-sm font-medium text-gray-700">
+                    URL / AAD (Dados Autenticados Adicionais)
+                </label>
+                <input type="url" id="urlAad" class="mt-1 block w-full rounded-md border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 p-2 border" placeholder="Ex: https://api.meudominio.com/v1/data" required>
+            </div>
+
+            <div>
+                <label for="payloadInput" class="block text-sm font-medium text-gray-700">
+                    Dados a Criptografar / String Criptografada
+                </label>
+                <textarea id="payloadInput" rows="4" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2 border" placeholder="Insira aqui o texto a ser criptografado ou a string para descriptografar..." required></textarea>
+            </div>
+        </div>
+
+        <div class="mt-6 flex justify-around space-x-4">
+            <button id="encryptBtn" class="w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition duration-150 ease-in-out">
+                Criptografar
+            </button>
+            <button id="decryptBtn" class="w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition duration-150 ease-in-out">
+                Descriptografar
+            </button>
+        </div>
+
+        <div class="mt-8 border-t pt-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-3">Resultado:</h3>
+            <div id="resultOutput" class="p-4 bg-gray-50 border border-gray-200 rounded-md break-words min-h-[5rem]">
+                <p class="text-gray-500" id="resultText">O resultado da operação aparecerá aqui.</p>
+            </div>
+            
+            <div id="errorAlert" class="hidden mt-3 p-3 bg-red-100 border border-red-400 text-red-700 rounded-md">
+                <strong class="font-bold">Erro:</strong> <span id="errorText"></span>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // URL da sua API PHP
+        // ******************************************************************************
+        // ATENÇÃO: Mude esta URL para o caminho correto do seu arquivo api.php no servidor
+        // Ex: Se você usar um servidor local, pode ser algo como: http://localhost/crypto-project/src/api.php
+        // ******************************************************************************
+        const API_URL = 'api.php'; 
+
+        const keyInput = document.getElementById('encryptionKey');
+        const urlInput = document.getElementById('urlAad');
+        const payloadInput = document.getElementById('payloadInput');
+        const generateKeyBtn = document.getElementById('generateKeyBtn');
+        const encryptBtn = document.getElementById('encryptBtn');
+        const decryptBtn = document.getElementById('decryptBtn');
+        const resultText = document.getElementById('resultText');
+        const errorAlert = document.getElementById('errorAlert');
+        const errorText = document.getElementById('errorText');
+
+        // Função para gerar chave hexadecimal de 64 caracteres
+        function generateRandomKey() {
+            let key = '';
+            for (let i = 0; i < 64; i++) {
+                key += Math.floor(Math.random() * 16).toString(16);
+            }
+            return key;
+        }
+
+        // Gerar chave ao carregar a página
+        keyInput.value = generateRandomKey();
+
+        // Listener para o botão de Gerar
+        generateKeyBtn.addEventListener('click', () => {
+            keyInput.value = generateRandomKey();
+        });
+
+        // Função para mostrar erro
+        function displayError(message) {
+            errorText.textContent = message;
+            errorAlert.classList.remove('hidden');
+            resultText.textContent = 'O resultado da operação aparecerá aqui.';
+            resultText.classList.remove('text-green-700', 'font-mono');
+            resultText.classList.add('text-gray-500');
+        }
+
+        // Função para mostrar resultado
+        function displayResult(data, isEncrypted = false) {
+            errorAlert.classList.add('hidden');
+            resultText.textContent = data;
+            resultText.classList.remove('text-gray-500');
+            resultText.classList.add(isEncrypted ? 'text-green-700' : 'text-blue-700', 'font-mono', 'text-sm');
+            
+            // Colocar o resultado da criptografia no payload para facilitar a descriptografia
+            //if (isEncrypted) {
+                 payloadInput.value = data;
+            //}
+        }
+
+        // Função principal para fazer a requisição à API
+        async function apiCall(action) {
+            const key = keyInput.value.trim();
+            const url = urlInput.value.trim();
+            const payload = payloadInput.value; // Não trim para preservar espaços no texto
+
+            // Validação simples
+            if (key.length !== 64 || !/^[0-9a-fA-F]{64}$/.test(key)) {
+                displayError("A chave deve ter exatamente 64 caracteres hexadecimais.");
+                return;
+            }
+            if (!url) {
+                displayError("A URL/AAD é obrigatória.");
+                return;
+            }
+            if (!payload) {
+                 displayError(`O campo de dados para ${action === 'encrypt' ? 'criptografar' : 'descriptografar'} não pode estar vazio.`);
+                 return;
+            }
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ action, key, url, payload }),
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    displayResult(result.data, action === 'encrypt');
+                } else {
+                    displayError(result.error || 'Erro desconhecido na API.');
+                }
+
+            } catch (error) {
+                console.error('Erro na requisição:', error);
+                displayError(`Falha na comunicação com o backend. Verifique a URL: ${API_URL}`);
+            }
+        }
+
+        // Listeners para os botões de Criptografar e Descriptografar
+        encryptBtn.addEventListener('click', () => apiCall('encrypt'));
+        decryptBtn.addEventListener('click', () => apiCall('decrypt'));
+
+    </script>
+</body>
+</html>
